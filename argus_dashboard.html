@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Argus — Dashboard Mockup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b0d;
+    --panel: #111317;
+    --panel-2: #15181d;
+    --line: #20242b;
+    --line-2: #2a2f37;
+    --text: #e8e6e1;
+    --muted: #7a7f88;
+    --dim: #4a4e56;
+    --safe: #8fb88a;
+    --warn: #d4a857;
+    --threat: #c2604f;
+    --accent: #d4a857;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter Tight', system-ui, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    font-size: 13px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .serif { font-family: 'Instrument Serif', serif; font-style: italic; }
+
+  .argus { height: 100vh; display: flex; flex-direction: column; }
+
+  /* Top bar */
+  .argus-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .argus-top::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: -1px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.2;
+    pointer-events: none;
+  }
+  .argus-brand { display: flex; align-items: center; gap: 12px; }
+  .sauron-eye {
+    width: 32px; height: 32px;
+    flex-shrink: 0;
+  }
+  .sauron-eye svg { width: 100%; height: 100%; display: block; }
+  .argus-name { font-family: 'Instrument Serif', serif; font-size: 22px; letter-spacing: 0.5px; }
+  .argus-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    border-left: 1px solid var(--line-2);
+    padding-left: 12px; margin-left: 4px;
+  }
+  .argus-stats { display: flex; gap: 28px; align-items: center; }
+  .argus-stat { display: flex; flex-direction: column; gap: 2px; }
+  .argus-stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.5px;
+  }
+  .argus-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500; }
+  .argus-stat-val.up { color: var(--safe); }
+  .argus-chain-pill {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid var(--line-2);
+    border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+  .argus-chain-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--safe);
+    box-shadow: 0 0 6px var(--safe);
+  }
+
+  .argus-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr 340px;
+    flex: 1;
+    overflow: hidden;
+  }
+  .argus-col { display: flex; flex-direction: column; overflow: hidden; }
+  .argus-col + .argus-col { border-left: 1px solid var(--line); }
+
+  .argus-col-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    flex-shrink: 0;
+  }
+  .argus-col-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 2px;
+  }
+  .argus-col-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--dim);
+  }
+
+  /* Chat */
+  .chat-thread {
+    flex: 1; overflow-y: auto;
+    padding: 20px 16px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .chat-msg { display: flex; flex-direction: column; gap: 4px; }
+  .chat-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--dim);
+    text-transform: uppercase; letter-spacing: 1.2px;
+  }
+  .chat-bubble.user {
+    border: 1px solid var(--line-2);
+    border-radius: 2px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .chat-bubble.agent { padding: 2px 0; font-size: 13px; }
+  .chat-bubble.agent .serif { font-size: 16px; color: var(--text); }
+  .chat-card {
+    margin-top: 10px;
+    border: 1px solid var(--line-2);
+    border-radius: 3px;
+    background: var(--panel-2);
+    padding: 12px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .chat-card-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .chat-card-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  }
+  .chat-card-row {
+    display: flex; justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--muted);
+  }
+  .chat-card-row span:last-child { color: var(--text); }
+  .chat-card-actions { display: flex; gap: 6px; margin-top: 4px; }
+  .chat-btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--line-2);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase; letter-spacing: 1px;
+    padding: 8px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chat-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .chat-btn.primary {
+    background: var(--accent); border-color: var(--accent);
+    color: #0a0b0d; font-weight: 600;
+  }
+  .chat-btn.primary:hover { background: #e0b865; border-color: #e0b865; }
+  .chat-input-wrap {
+    border-top: 1px solid var(--line);
+    padding: 14px 16px;
+    background: var(--panel);
+    flex-shrink: 0;
+  }
+  .chat-input-row {
+    display: flex; gap: 8px; align-items: center;
+    background: var(--bg);
+    border: 1px solid var(--line-2);
+    border-radius: 2px;
+    padding: 8px 10px;
+    transition: border-color 0.15s;
+  }
+  .chat-input-row:focus-within { border-color: var(--accent); }
+  .chat-prompt {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent); font-size: 12px;
+    user-select: none;
+  }
+  .chat-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text);
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 13px;
+  }
+  .chat-input::placeholder { color: var(--dim); }
+  .chat-suggestions {
+    display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap;
+  }
+  .chat-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    border: 1px solid var(--line-2);
+    border-radius: 100px;
+    padding: 4px 10px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chat-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Center */
+  .center-scroll { flex: 1; overflow-y: auto; padding: 20px 24px 28px; }
+  .portfolio-hero {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 22px; gap: 24px;
+  }
+  .portfolio-value-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 2px;
+  }
+  .portfolio-value-num {
+    font-family: 'Instrument Serif', serif;
+    font-size: 48px; line-height: 1; letter-spacing: -1px;
+    margin-top: 4px;
+  }
+  .portfolio-value-num .cents { color: var(--muted); font-size: 28px; }
+  .portfolio-value-delta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--safe); margin-top: 6px;
+  }
+  .spark { flex: 1; height: 70px; max-width: 280px; }
+
+  .vault-list {
+    display: flex; flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 22px;
+  }
+  .vault-list-head {
+    display: grid;
+    grid-template-columns: 1.4fr 0.7fr 0.7fr 0.7fr 0.9fr 24px;
+    gap: 12px; padding: 8px 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.5px;
+  }
+  .vault-row {
+    display: grid;
+    grid-template-columns: 1.4fr 0.7fr 0.7fr 0.7fr 0.9fr 24px;
+    gap: 12px; align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .vault-row:last-child { border-bottom: none; }
+  .vault-row:hover { background: var(--panel-2); }
+  .vault-row.active {
+    background: var(--panel-2);
+    border-left: 2px solid var(--accent);
+    padding-left: 12px;
+  }
+  .vault-name { display: flex; align-items: center; gap: 10px; }
+  .vault-icon {
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    border: 1px solid var(--line-2);
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 600; color: var(--muted);
+  }
+  .vault-name-text { font-size: 13px; }
+  .vault-name-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--dim);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .vault-cell { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .vault-cell.muted { color: var(--muted); }
+  .vault-apy { color: var(--safe); }
+  .threat-meter { display: flex; align-items: center; gap: 8px; }
+  .threat-bars { display: flex; gap: 2px; }
+  .threat-bars span {
+    width: 4px; height: 12px;
+    background: var(--line-2);
+    border-radius: 1px;
+  }
+  .threat-bars.low span:nth-child(-n+1) { background: var(--safe); }
+  .threat-bars.med span:nth-child(-n+2) { background: var(--warn); }
+  .threat-bars.high span:nth-child(-n+4) { background: var(--threat); }
+  .threat-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .threat-num.safe { color: var(--safe); }
+  .threat-num.warn { color: var(--warn); }
+  .threat-num.danger { color: var(--threat); }
+
+  .vault-detail {
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .vault-detail-head {
+    padding: 16px 18px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .vault-detail-name {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px;
+  }
+  .vault-detail-addr {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    margin-top: 4px;
+  }
+  .vault-score { text-align: right; }
+  .vault-score-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.5px;
+  }
+  .vault-score-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px; font-weight: 500; color: var(--safe);
+    line-height: 1; margin-top: 2px;
+  }
+  .vault-detail-body { display: grid; grid-template-columns: 1fr 1fr; }
+  .vault-detail-cell {
+    padding: 14px 18px;
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .vault-detail-cell:nth-child(2n) { border-right: none; }
+  .vdc-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.5px;
+  }
+  .vdc-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+  .vdc-val.safe { color: var(--safe); }
+
+  .vault-breakdown { padding: 16px 18px; }
+  .vb-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    margin-bottom: 12px;
+  }
+  .vb-bars { display: flex; flex-direction: column; gap: 8px; }
+  .vb-row {
+    display: grid;
+    grid-template-columns: 160px 1fr 60px;
+    gap: 12px; align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+  .vb-row-label { color: var(--muted); }
+  .vb-track {
+    height: 4px;
+    background: var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .vb-fill {
+    height: 100%;
+    background: var(--safe);
+    border-radius: 2px;
+    transform-origin: left;
+    animation: vb-grow 1s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  }
+  .vb-fill.warn { background: var(--warn); }
+  .vb-fill.danger { background: var(--threat); }
+  @keyframes vb-grow { from { transform: scaleX(0); } }
+  .vb-row-val { text-align: right; }
+
+  /* Right column */
+  .threat-scroll { flex: 1; overflow-y: auto; }
+  .threat-section {
+    border-bottom: 1px solid var(--line);
+    padding: 14px 16px;
+  }
+  .threat-section-title {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    margin-bottom: 10px;
+  }
+  .live-dot {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--safe); font-size: 9px;
+  }
+  .live-dot::before {
+    content: '';
+    width: 5px; height: 5px;
+    background: var(--safe);
+    border-radius: 50%;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .watcher-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+  .watcher-name { display: flex; align-items: center; gap: 8px; }
+  .watcher-status-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--safe);
+    box-shadow: 0 0 4px var(--safe);
+  }
+  .watcher-status-dot.idle { background: var(--dim); box-shadow: none; }
+  .watcher-meta { color: var(--dim); font-size: 10px; }
+
+  .evidence-item {
+    border-top: 1px solid var(--line);
+    padding: 10px 0;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .evidence-item:first-of-type { border-top: none; padding-top: 0; }
+  .evidence-head {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.2px;
+  }
+  .evidence-source {
+    display: inline-flex; align-items: center; gap: 5px;
+    color: var(--text);
+  }
+  .evidence-text { font-size: 12px; line-height: 1.45; }
+  .evidence-text .hl-warn { color: var(--warn); }
+  .evidence-text .hl-safe { color: var(--safe); }
+  .evidence-foot {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--dim);
+    display: flex; gap: 12px;
+  }
+  .signed { color: var(--safe); }
+
+  .audit-row {
+    display: grid;
+    grid-template-columns: 50px 1fr auto;
+    gap: 10px; padding: 6px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; align-items: center;
+  }
+  .audit-time { color: var(--dim); }
+  .audit-action { color: var(--text); }
+  .audit-tx { color: var(--accent); cursor: pointer; }
+  .audit-tx:hover { text-decoration: underline; }
+
+  *::-webkit-scrollbar { width: 6px; height: 6px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
+  *::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .typing { display: inline-flex; gap: 3px; padding: 4px 0; }
+  .typing span {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: typing-bounce 1.2s ease-in-out infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.15s; }
+  .typing span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-3px); opacity: 1; }
+  }
+
+  .argus-grid > * { animation: fadein 0.6s ease-out backwards; }
+  .argus-grid > *:nth-child(1) { animation-delay: 0.05s; }
+  .argus-grid > *:nth-child(2) { animation-delay: 0.15s; }
+  .argus-grid > *:nth-child(3) { animation-delay: 0.25s; }
+  @keyframes fadein {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="argus">
+  <!-- Top bar -->
+  <div class="argus-top">
+    <div class="argus-brand">
+      <div class="sauron-eye">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#e8e6e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Outer almond eye shape -->
+          <path d="M 8 50 Q 50 8 92 50 Q 50 92 8 50 Z"/>
+          <!-- Inner iris ring -->
+          <ellipse cx="50" cy="50" rx="30" ry="20"/>
+          <!-- Iris detail -->
+          <ellipse cx="50" cy="50" rx="18" ry="14"/>
+          <!-- Vertical slit pupil -->
+          <path d="M 50 36 L 50 64" stroke-width="3"/>
+          <!-- Flame strokes radiating outward -->
+          <path d="M 4 50 Q 1 48 -2 50" opacity="0.7"/>
+          <path d="M 96 50 Q 99 48 102 50" opacity="0.7"/>
+          <path d="M 20 28 Q 18 24 19 20" opacity="0.5"/>
+          <path d="M 80 28 Q 82 24 81 20" opacity="0.5"/>
+          <path d="M 20 72 Q 18 76 19 80" opacity="0.5"/>
+          <path d="M 80 72 Q 82 76 81 80" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="argus-name">argus</div>
+      <div class="argus-tag">all-seeing yield agent</div>
+    </div>
+    <div class="argus-stats">
+      <div class="argus-stat">
+        <div class="argus-stat-label">Deposited</div>
+        <div class="argus-stat-val">$1,247.00</div>
+      </div>
+      <div class="argus-stat">
+        <div class="argus-stat-label">Earning</div>
+        <div class="argus-stat-val up">+$12.41</div>
+      </div>
+      <div class="argus-stat">
+        <div class="argus-stat-label">Avg APY</div>
+        <div class="argus-stat-val">4.82%</div>
+      </div>
+      <div class="argus-chain-pill">
+        <span class="argus-chain-dot"></span>
+        Base · 0x7a2f…91Ac
+      </div>
+    </div>
+  </div>
+
+  <div class="argus-grid">
+
+    <!-- LEFT: Chat -->
+    <div class="argus-col">
+      <div class="argus-col-head">
+        <div class="argus-col-title">// agent · manager.argus.eth</div>
+        <div class="argus-col-meta">ctx 3.2k</div>
+      </div>
+      <div class="chat-thread" id="argus-thread">
+        <div class="chat-msg">
+          <div class="chat-meta">you · 09:42</div>
+          <div class="chat-bubble user">deposit 1 USDC into a safe low-risk pool</div>
+        </div>
+        <div class="chat-msg">
+          <div class="chat-meta">argus · 09:42</div>
+          <div class="chat-bubble agent">
+            Scanning <span class="serif">3 chains</span> across <span class="serif">14 pools</span>. Filtering by risk score &gt; 80, audited &gt; 12mo, TVL &gt; $50M.
+            <div class="chat-card">
+              <div class="chat-card-head">
+                <div class="chat-card-title">Aave v3 · USDC</div>
+                <div class="threat-num safe mono">SAFE 92</div>
+              </div>
+              <div class="chat-card-row"><span>Net APY</span><span>4.82%</span></div>
+              <div class="chat-card-row"><span>TVL</span><span>$842.1M</span></div>
+              <div class="chat-card-row"><span>Chain</span><span>Base</span></div>
+              <div class="chat-card-row"><span>Polymarket hack odds</span><span class="mono" style="color:var(--safe)">2%</span></div>
+              <div class="chat-card-actions">
+                <button class="chat-btn">Reject</button>
+                <button class="chat-btn primary">Approve · 1 USDC</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-msg" id="argus-pending" style="display:none;">
+          <div class="chat-meta">argus · now</div>
+          <div class="chat-bubble agent">
+            <span class="typing"><span></span><span></span><span></span></span>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-wrap">
+        <div class="chat-input-row">
+          <span class="chat-prompt">›</span>
+          <input class="chat-input" id="argus-input" placeholder="ask argus to deposit, exit, rebalance…" />
+        </div>
+        <div class="chat-suggestions">
+          <div class="chat-chip" data-q="What's my safest position?">safest position?</div>
+          <div class="chat-chip" data-q="Exit if hack odds exceed 15%">set exit rule</div>
+          <div class="chat-chip" data-q="Rebalance to highest yield">rebalance</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="argus-col">
+      <div class="argus-col-head">
+        <div class="argus-col-title">// portfolio</div>
+        <div class="argus-col-meta">last sync 12s</div>
+      </div>
+      <div class="center-scroll">
+        <div class="portfolio-hero">
+          <div>
+            <div class="portfolio-value-label">Total Value</div>
+            <div class="portfolio-value-num">$1,259<span class="cents">.41</span></div>
+            <div class="portfolio-value-delta">▲ $12.41 · 0.99% · 30d</div>
+          </div>
+          <svg class="spark" viewBox="0 0 280 70" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#8fb88a" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#8fb88a" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path d="M0,55 L20,52 L40,48 L60,50 L80,42 L100,44 L120,38 L140,32 L160,34 L180,28 L200,24 L220,22 L240,18 L260,14 L280,10 L280,70 L0,70 Z" fill="url(#spark-grad)"/>
+            <path d="M0,55 L20,52 L40,48 L60,50 L80,42 L100,44 L120,38 L140,32 L160,34 L180,28 L200,24 L220,22 L240,18 L260,14 L280,10" fill="none" stroke="#8fb88a" stroke-width="1.2"/>
+          </svg>
+        </div>
+
+        <div class="vault-list">
+          <div class="vault-list-head">
+            <div>Pool</div><div>APY</div><div>Position</div><div>Yield</div><div>Threat</div><div></div>
+          </div>
+          <div class="vault-row active">
+            <div class="vault-name">
+              <div class="vault-icon">A</div>
+              <div>
+                <div class="vault-name-text">Aave v3 USDC</div>
+                <div class="vault-name-sub">Base · 0x4e65…fa12</div>
+              </div>
+            </div>
+            <div class="vault-cell vault-apy">4.82%</div>
+            <div class="vault-cell">$847.00</div>
+            <div class="vault-cell">+$8.21</div>
+            <div class="vault-cell">
+              <div class="threat-meter">
+                <div class="threat-bars low"><span></span><span></span><span></span><span></span></div>
+                <div class="threat-num safe">92</div>
+              </div>
+            </div>
+            <div class="vault-cell muted">›</div>
+          </div>
+          <div class="vault-row">
+            <div class="vault-name">
+              <div class="vault-icon">C</div>
+              <div>
+                <div class="vault-name-text">Compound USDC</div>
+                <div class="vault-name-sub">Arbitrum · 0xa17a…22b9</div>
+              </div>
+            </div>
+            <div class="vault-cell vault-apy">5.14%</div>
+            <div class="vault-cell">$300.00</div>
+            <div class="vault-cell">+$3.20</div>
+            <div class="vault-cell">
+              <div class="threat-meter">
+                <div class="threat-bars low"><span></span><span></span><span></span><span></span></div>
+                <div class="threat-num safe">88</div>
+              </div>
+            </div>
+            <div class="vault-cell muted">›</div>
+          </div>
+          <div class="vault-row">
+            <div class="vault-name">
+              <div class="vault-icon">M</div>
+              <div>
+                <div class="vault-name-text">Morpho Blue · USDC/wETH</div>
+                <div class="vault-name-sub">Base · 0xbc2e…0014</div>
+              </div>
+            </div>
+            <div class="vault-cell vault-apy">7.91%</div>
+            <div class="vault-cell">$100.00</div>
+            <div class="vault-cell">+$1.00</div>
+            <div class="vault-cell">
+              <div class="threat-meter">
+                <div class="threat-bars med"><span></span><span></span><span></span><span></span></div>
+                <div class="threat-num warn">64</div>
+              </div>
+            </div>
+            <div class="vault-cell muted">›</div>
+          </div>
+        </div>
+
+        <div class="vault-detail">
+          <div class="vault-detail-head">
+            <div>
+              <div class="vault-detail-name">Aave v3 · USDC</div>
+              <div class="vault-detail-addr">0x4e65a8e4c10238f2c5e4d84acd24cda01ffa12b3 · Base</div>
+            </div>
+            <div class="vault-score">
+              <div class="vault-score-label">Argus Score</div>
+              <div class="vault-score-num">92<span style="font-size:14px;color:var(--muted);">/100</span></div>
+            </div>
+          </div>
+          <div class="vault-detail-body">
+            <div class="vault-detail-cell">
+              <div class="vdc-label">Net APY</div>
+              <div class="vdc-val safe">4.82%</div>
+            </div>
+            <div class="vault-detail-cell">
+              <div class="vdc-label">TVL</div>
+              <div class="vdc-val">$842.1M</div>
+            </div>
+            <div class="vault-detail-cell">
+              <div class="vdc-label">Audits</div>
+              <div class="vdc-val" style="font-size:12px;">7 · OZ, Trail of Bits</div>
+            </div>
+            <div class="vault-detail-cell">
+              <div class="vdc-label">Time Live</div>
+              <div class="vdc-val">2y 4mo</div>
+            </div>
+          </div>
+          <div class="vault-breakdown">
+            <div class="vb-title">Score breakdown · live signals from watchers</div>
+            <div class="vb-bars">
+              <div class="vb-row">
+                <div class="vb-row-label">Polymarket hack odds</div>
+                <div class="vb-track"><div class="vb-fill" style="width:4%;"></div></div>
+                <div class="vb-row-val" style="color:var(--safe);">2%</div>
+              </div>
+              <div class="vb-row">
+                <div class="vb-row-label">Social sentiment X/Reddit</div>
+                <div class="vb-track"><div class="vb-fill" style="width:88%; animation-delay:0.1s;"></div></div>
+                <div class="vb-row-val" style="color:var(--safe);">+88</div>
+              </div>
+              <div class="vb-row">
+                <div class="vb-row-label">On-chain anomalies</div>
+                <div class="vb-track"><div class="vb-fill" style="width:6%; animation-delay:0.2s;"></div></div>
+                <div class="vb-row-val" style="color:var(--safe);">none</div>
+              </div>
+              <div class="vb-row">
+                <div class="vb-row-label">Telegram whale exits</div>
+                <div class="vb-track"><div class="vb-fill warn" style="width:24%; animation-delay:0.3s;"></div></div>
+                <div class="vb-row-val" style="color:var(--warn);">low</div>
+              </div>
+              <div class="vb-row">
+                <div class="vb-row-label">Audit / code freshness</div>
+                <div class="vb-track"><div class="vb-fill" style="width:95%; animation-delay:0.4s;"></div></div>
+                <div class="vb-row-val" style="color:var(--safe);">+95</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Threat ops -->
+    <div class="argus-col">
+      <div class="argus-col-head">
+        <div class="argus-col-title">// threat watchers</div>
+        <div class="live-dot mono">LIVE</div>
+      </div>
+      <div class="threat-scroll">
+
+        <div class="threat-section">
+          <div class="threat-section-title">
+            <span>Active swarm · 4/4</span>
+            <span class="argus-col-meta">watcher.argus.eth</span>
+          </div>
+          <div class="watcher-row">
+            <div class="watcher-name"><span class="watcher-status-dot"></span>polymarket-odds</div>
+            <div class="watcher-meta">3s ago</div>
+          </div>
+          <div class="watcher-row">
+            <div class="watcher-name"><span class="watcher-status-dot"></span>x-sentiment</div>
+            <div class="watcher-meta">11s ago</div>
+          </div>
+          <div class="watcher-row">
+            <div class="watcher-name"><span class="watcher-status-dot"></span>reddit-defi</div>
+            <div class="watcher-meta">42s ago</div>
+          </div>
+          <div class="watcher-row">
+            <div class="watcher-name"><span class="watcher-status-dot"></span>tg-whale-trace</div>
+            <div class="watcher-meta">1m ago</div>
+          </div>
+        </div>
+
+        <div class="threat-section">
+          <div class="threat-section-title">
+            <span>Evidence · Aave v3 USDC</span>
+          </div>
+
+          <div class="evidence-item">
+            <div class="evidence-head">
+              <div class="evidence-source">◆ polymarket</div>
+              <div>2m</div>
+            </div>
+            <div class="evidence-text">"Will Aave v3 be exploited by Dec 31?" — <span class="hl-safe">2% YES</span> · 412 traders · $48k volume</div>
+            <div class="evidence-foot"><span class="signed">✓ signed</span><span>0x9a1e…</span></div>
+          </div>
+
+          <div class="evidence-item">
+            <div class="evidence-head">
+              <div class="evidence-source">◆ x.com</div>
+              <div>14m</div>
+            </div>
+            <div class="evidence-text">@samczsun: "Reviewed the latest Aave gov proposal — risk params look <span class="hl-safe">conservative and well-modeled</span>."</div>
+            <div class="evidence-foot"><span class="signed">✓ signed</span><span>verified · 312k</span></div>
+          </div>
+
+          <div class="evidence-item">
+            <div class="evidence-head">
+              <div class="evidence-source">◆ telegram</div>
+              <div>38m</div>
+            </div>
+            <div class="evidence-text">whale 0xf3a1… moved <span class="hl-warn">$2.1M out of Aave</span> → no contagion on related vaults</div>
+            <div class="evidence-foot"><span class="signed">✓ signed</span><span>weight 0.18</span></div>
+          </div>
+
+        </div>
+
+        <div class="threat-section">
+          <div class="threat-section-title">
+            <span>Swarm audit log</span>
+            <span class="argus-col-meta">on-chain</span>
+          </div>
+          <div class="audit-row">
+            <div class="audit-time">09:42</div>
+            <div class="audit-action">Quote requested · Aave v3</div>
+            <div class="audit-tx">0x7a…f1</div>
+          </div>
+          <div class="audit-row">
+            <div class="audit-time">09:38</div>
+            <div class="audit-action">Score updated · Morpho 64→61</div>
+            <div class="audit-tx">0x2c…a4</div>
+          </div>
+          <div class="audit-row">
+            <div class="audit-time">09:31</div>
+            <div class="audit-action">x402 paid · 0.02 USDC scrape</div>
+            <div class="audit-tx">0xb8…0e</div>
+          </div>
+          <div class="audit-row">
+            <div class="audit-time">09:18</div>
+            <div class="audit-action">Evidence bundle signed</div>
+            <div class="audit-tx">0x4e…9c</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  const input = document.getElementById('argus-input');
+  const thread = document.getElementById('argus-thread');
+  const pending = document.getElementById('argus-pending');
+  const chips = document.querySelectorAll('.chat-chip');
+
+  function timeNow() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+
+  function addMsg(who, text) {
+    const m = document.createElement('div');
+    m.className = 'chat-msg';
+    m.innerHTML = '<div class="chat-meta">' + who + ' · ' + timeNow() + '</div>' +
+                  '<div class="chat-bubble ' + (who === 'you' ? 'user' : 'agent') + '">' + text + '</div>';
+    thread.insertBefore(m, pending);
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  function respond(userText) {
+    pending.style.display = 'flex';
+    thread.scrollTop = thread.scrollHeight;
+    setTimeout(function() {
+      pending.style.display = 'none';
+      let reply;
+      const t = userText.toLowerCase();
+      if (t.includes('safest') || (t.includes('safe') && t.includes('position'))) {
+        reply = 'Aave v3 USDC on Base — Argus score <strong>92</strong>. Polymarket hack odds 2%, no whale exits flagged.';
+      } else if (t.includes('exit') && (t.includes('rule') || t.includes('exceed') || t.includes('odds'))) {
+        reply = 'Rule set: <strong>auto-exit</strong> when Polymarket hack odds exceed 15%. Watchers will alert via ENS lookup.';
+      } else if (t.includes('rebalance')) {
+        reply = 'Proposing rebalance: $200 from Compound (5.14%) → Morpho (7.91%). Threat score on Morpho is <strong>64 — moderate</strong>. Confirm?';
+      } else if (t.includes('exit')) {
+        reply = 'Exiting position. Burning vault shares, returning USDC to wallet. Estimated gas ~$0.02 on Base.';
+      } else if (t.includes('deposit')) {
+        reply = 'I can route to <strong>Aave v3 (4.82%, score 92)</strong> or <strong>Compound (5.14%, score 88)</strong>. Both safe. Which?';
+      } else {
+        reply = 'I can deposit, exit, rebalance, or set rules. Try: "what\'s my safest position" or "set auto-exit at 15% hack odds".';
+      }
+      addMsg('argus', reply);
+    }, 900);
+  }
+
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && input.value.trim()) {
+      const v = input.value.trim();
+      addMsg('you', v);
+      input.value = '';
+      respond(v);
+    }
+  });
+
+  chips.forEach(function(c) {
+    c.addEventListener('click', function() {
+      const q = c.getAttribute('data-q');
+      addMsg('you', q);
+      respond(q);
+    });
+  });
+
+  document.querySelectorAll('.vault-row').forEach(function(row) {
+    row.addEventListener('click', function() {
+      document.querySelectorAll('.vault-row').forEach(function(r) { r.classList.remove('active'); });
+      row.classList.add('active');
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #0a0b0d;
+  color: #e8e6e1;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+body {
+  font-family: var(--font-inter-tight), system-ui, sans-serif;
+  overflow: hidden;
+}
+
+/* Scrollbar */
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #2a2f37; border-radius: 3px; }
+*::-webkit-scrollbar-thumb:hover { background: #7a7f88; }
+
+/* Typing dots */
+.typing { display: inline-flex; gap: 3px; padding: 4px 0; }
+.typing span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #7a7f88;
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+.typing span:nth-child(2) { animation-delay: 0.15s; }
+.typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+
+/* Live dot pulse */
+.live-pulse::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  background: #8fb88a;
+  border-radius: 50%;
+  margin-right: 6px;
+  animation: pulse 1.6s ease-in-out infinite;
+  vertical-align: middle;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Status dot glow */
+.status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #8fb88a;
+  box-shadow: 0 0 4px #8fb88a;
+}
+.status-dot.idle { background: #4a4e56; box-shadow: none; }
+.chain-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8fb88a;
+  box-shadow: 0 0 6px #8fb88a;
+}
+
+/* Score breakdown bar fill animation */
+.vb-fill {
+  height: 100%;
+  background: #8fb88a;
+  border-radius: 2px;
+  transform-origin: left;
+  animation: vb-grow 1s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.vb-fill.warn { background: #d4a857; }
+.vb-fill.danger { background: #c2604f; }
+@keyframes vb-grow {
+  from { transform: scaleX(0); }
+}
+
+/* Column fade-in */
+.fade-col { animation: fadein 0.6s ease-out backwards; }
+.fade-col:nth-child(1) { animation-delay: 0.05s; }
+.fade-col:nth-child(2) { animation-delay: 0.15s; }
+.fade-col:nth-child(3) { animation-delay: 0.25s; }
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Top bar gradient underline */
+.argus-top-shadow::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #d4a857, transparent);
+  opacity: 0.2;
+  pointer-events: none;
+}

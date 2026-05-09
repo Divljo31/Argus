@@ -1,0 +1,31 @@
+node_modules
+dist
+build
+out
+.next
+.turbo
+coverage
+
+# env
+.env
+.env.*
+!.env.example
+
+# foundry
+contracts/cache
+contracts/out
+contracts/broadcast/**/dry-run
+
+# editors
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# agent state
+agents/*/data/*.sqlite
+agents/*/data/*.sqlite-journal
+agents/*/data/*.sqlite-wal
+agents/*/data/*.sqlite-shm
+agents/*/data/*.db
+*.log
