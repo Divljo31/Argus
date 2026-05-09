@@ -65,9 +65,12 @@ cast call 0x4486738ec027F0776B25aC2F5E2744FCe6F96e1e "totalAssets()(uint256)" --
 - [`agents/watcher/src/scrapers.ts`](agents/watcher/src/scrapers.ts) — four scrape functions, the `x402Fetcher` wrapping only the Polymarket call
 - [`agents/watcher/src/classifier.ts:24-34`](agents/watcher/src/classifier.ts#L24-L34) — Polymarket short-circuit using `impliedProb`
 
-### 3. Swarm — verifiable evidence trail (secondary)
+### 3. Swarm — verifiable evidence trail + a reusable KV library (secondary)
 
-**What we built:**
+We ship two distinct Swarm contributions:
+
+#### 3a. Live receipt trail (used by the agents)
+
 - All receipts (deposits, withdraws, threat alerts, evidence bundles) are uploaded to Swarm via `@ethersphere/bee-js` v12.
 - Uses the **bzz.limo** hosted gateway with `NULL_STAMP` — no postage batch setup required, the gateway rewrites it. Verified live: upload returns a 64-char ref, retrieval at `bzz.limo/bytes/<ref>` returns the exact JSON.
 - Receipts are linked from the frontend audit log — every row has a `swarm ↗` link the audience can click to see the actual signed payload.
@@ -76,6 +79,30 @@ cast call 0x4486738ec027F0776B25aC2F5E2744FCe6F96e1e "totalAssets()(uint256)" --
 **Where in the code:**
 - [`agents/manager/src/swarm.ts`](agents/manager/src/swarm.ts), [`agents/watcher/src/swarm.ts`](agents/watcher/src/swarm.ts) — `Bee('https://bzz.limo')` + `NULL_STAMP`
 - [`frontend/components/ThreatPanel.tsx`](frontend/components/ThreatPanel.tsx) — Evidence and Exits sections render `bzz.limo/bytes/<ref>` deep-links
+
+#### 3b. `@argus/swarm-kv` — a reusable developer library
+
+A standalone TypeScript package that wraps Swarm's low-level primitives (Feeds, Single Owner Chunks, postage batches) into a `get` / `put` / `list` / `delete` API with end-to-end encryption derived from the user's Ethereum private key. Most app code shouldn't have to know about feeds or topics — `swarm-kv` makes Swarm feel like an encrypted, decentralized `localStorage`.
+
+```ts
+import { openKv } from "@argus/swarm-kv";
+
+const kv = await openKv({ bee, privateKey, namespace: "myapp.v1", postage: { auto: true } });
+await kv.put("user.profile", { age: 30, theme: "dark" });
+await kv.getJson("user.profile");   // → { age: 30, theme: "dark" }
+await kv.list();                    // → ["user.profile", ...]
+```
+
+What it gives you:
+- **End-to-end encryption** — values encrypted with AES-256-GCM, key derived via HKDF-SHA256 from your private key. Key names hidden as HMAC-derived topics.
+- **String / JSON / binary** support with automatic type detection on read.
+- **Listable** — an encrypted index feed tracks all keys, no manifest plumbing needed.
+- **Auto-postage** — buys a batch on first write if you don't have one, or uses any usable batch on the node.
+- **No bee-js leakage** — your app code never touches feeds, topics, SOCs, or stamps directly.
+
+Use cases beyond Argus: dApp user profiles, app settings sync, chat history, bookmarks — anything you'd put in `localStorage` but want to follow a wallet across devices.
+
+**Where in the code:** [`packages/swarm-kv/`](packages/swarm-kv/) — see its [README](packages/swarm-kv/README.md) for the full API and privacy model.
 
 ### 4. Best Agentic Venture / Umia — narrative
 
@@ -137,9 +164,10 @@ Both agents resolve each other via mainnet ENS (CCIP-Read aware). The manager's 
 ```
 contracts/         Foundry — YieldVault.sol + tests
 packages/shared/   TS — EIP-712 alert types, ENS resolver helpers, address constants
+packages/swarm-kv/ TS — encrypted KV library on Swarm (get/put/list/delete with E2E encryption)
 agents/manager/    Express on :4001 — watches vault, supplies/exits Aave, persists receipts
 agents/watcher/    30s tick — scrapes 4 Apify actors, classifies, scores, signs alerts
-frontend/          Next.js 15 + wagmi 2.19 + ensjs 4.2 — three-pane dashboard + /watchers page
+frontend/          Next.js 15 + wagmi 2.19 + ensjs 4.2 — three-pane dashboard, /watchers, /build
 docs/              Technical Spec (high-level) + diagrams
 ```
 
@@ -156,29 +184,12 @@ Three terminals:
 # Terminal 1 — manager (Express :4001)
 pnpm --filter @argus/manager dev
 
-# Terminal 2 — watcher (30s tick loop)
+# Terminal 2 — watcher
 pnpm --filter @argus/watcher dev
 
 # Terminal 3 — frontend (:3000)
 pnpm --filter @argus/frontend dev
 ```
-
-Optional 4th terminal to expose manager publicly for the demo:
-
-```bash
-ngrok http --url=argus-manager.ngrok-free.app 4001
-# then update agent-endpoint[a2a] on manager.argus.divljo.eth to the ngrok URL
-```
-
-## Demo flow
-
-1. Open http://localhost:3000, connect MetaMask (vault owner wallet, Base network)
-2. In the chat panel: **`info`** — manager `/health` echoes vault state + ENS-resolved watcher address
-3. **`deposit 1 usdc`** — wallet approves + deposits → manager detects the on-chain `Deposit` event → calls `managerSupplyAave` automatically
-4. Wait ~30s — watcher next tick scrapes 4 Apify actors, mock classifier (no Anthropic key) marks items high-threat, ThreatScore ≥ 60 fires a signed alert
-5. Manager verifies signature via ENS, calls `managerWithdrawAave`, vault back to idle
-6. Right column shows: real **Evidence** receipt + **Exits triggered** ($N pulled) with clickable `swarm ↗` links to `bzz.limo/bytes/<ref>`
-7. **`withdraw 1`** in chat — pulls idle USDC back to your wallet
 
 ## Stack pinning
 
@@ -188,7 +199,7 @@ ngrok http --url=argus-manager.ngrok-free.app 4001
 - Solidity 0.8.28 + Foundry
 - bee-js 12.0.0
 - @x402/fetch + @x402/evm 2.11
-- Anthropic SDK 0.32.1 (mock classifier on by default — set `ANTHROPIC_API_KEY` to switch to real Claude)
+- Anthropic SDK 0.32.1
 
 ## Safety rails
 
@@ -200,19 +211,6 @@ ngrok http --url=argus-manager.ngrok-free.app 4001
 | Alert idempotency on `alertId` | manager SQLite PK |
 | Watcher cooldown 2 min between alerts | [`agents/watcher/src/index.ts:17`](agents/watcher/src/index.ts#L17) |
 | EIP-712 alert verification against live ENS | [`agents/manager/src/index.ts:72-76`](agents/manager/src/index.ts#L72-L76) |
-
-## What's mocked / deferred (honest list)
-
-- **Argus Score** + **Score breakdown bars** in the dashboard — hardcoded; the watcher's real aggregator score isn't surfaced via an HTTP endpoint yet.
-- **Chat panel routing** — regex matcher with three real commands (`deposit`, `withdraw`, `info`) wired to wagmi; other queries get canned responses. No real LLM tool-use yet.
-- **ANTHROPIC_API_KEY** intentionally unset → **mock classifier** with `MOCK_THREAT_LEVEL` dial. Set the key to switch to real Claude Haiku.
-- **Four watcher subnames** (`polymarket-watcher.argus.divljo.eth` etc.) are **defined in the registry** and surfaced on the `/watchers` page, but their ENS subnames + EOAs are not yet issued onchain. Single-process watcher today; logical sub-agents on the page.
-- **Per-user vault subnames** (`<handle>.argus.divljo.eth`) — deferred (Namestone path abandoned in favor of onchain NameWrapper, where per-user issuance costs gas).
-- **Multi-chain selection** ("manager picks higher APY") — Base-only for the demo.
-
-## Hackathon-grade
-
-This is a 48-hour build. Hot keys live in `.env` and are deliberately scoped — manager and watcher EOAs hold ≤ ~$5 ETH each on Base, vault is capped at 5 USDC. Nothing here is production. The point is to demonstrate the **trust primitives end-to-end on real mainnet infrastructure**: ENS, Aave, Swarm, Apify x402.
 
 ## License
 
