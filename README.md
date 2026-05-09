@@ -199,19 +199,4 @@ pnpm --filter @argus/frontend dev
 - Solidity 0.8.28 + Foundry
 - bee-js 12.0.0
 - @x402/fetch + @x402/evm 2.11
-- Anthropic SDK 0.32.1
 
-## Safety rails
-
-| Rail | Where |
-|---|---|
-| Manager EOA cannot transfer funds out — only vault↔Aave | [`YieldVault.sol`](contracts/src/YieldVault.sol) `managerSupplyAave` / `managerWithdrawAave` |
-| Owner can `withdrawToOwner` even when paused | [`YieldVault.sol:78-82`](contracts/src/YieldVault.sol#L78-L82) |
-| `maxDeposit` cap (5 USDC for demo) | constructor-bound, not settable |
-| Alert idempotency on `alertId` | manager SQLite PK |
-| Watcher cooldown 2 min between alerts | [`agents/watcher/src/index.ts:17`](agents/watcher/src/index.ts#L17) |
-| EIP-712 alert verification against live ENS | [`agents/manager/src/index.ts:72-76`](agents/manager/src/index.ts#L72-L76) |
-
-## License
-
-MIT — see [LICENSE](LICENSE).
