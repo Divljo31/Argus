@@ -7,14 +7,14 @@ export default function Page() {
   return (
     <div className="flex h-screen flex-col">
       <TopBar />
-      <div className="grid flex-1 grid-cols-[440px_1fr_340px] overflow-hidden">
-        <div className="overflow-hidden">
+      <div className="grid min-h-0 flex-1 grid-cols-[440px_1fr_340px] overflow-hidden">
+        <div className="min-h-0 overflow-hidden">
           <ChatPanel />
         </div>
-        <div className="overflow-hidden border-l border-line">
+        <div className="min-h-0 overflow-hidden border-l border-line">
           <PortfolioPanel />
         </div>
-        <div className="overflow-hidden border-l border-line">
+        <div className="min-h-0 overflow-hidden border-l border-line">
           <ThreatPanel />
         </div>
       </div>

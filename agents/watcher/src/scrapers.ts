@@ -2,8 +2,32 @@ import { wrapFetchWithPaymentFromConfig } from "@x402/fetch";
 import { ExactEvmScheme } from "@x402/evm";
 import { privateKeyToAccount } from "viem/accounts";
 import { existsSync, readFileSync, unlinkSync } from "node:fs";
+import { resolveAgent, pickAgentEndpoint } from "@argus/shared";
 import { env } from "./env.js";
 import { logger } from "./logger.js";
+import { ensClient } from "./clients.js";
+
+/**
+ * Tells the manager that a metered scrape just settled. When USE_X402=true
+ * and the x402-fetch wrapper returns settlement headers, txHash should be
+ * passed through; otherwise it's omitted (token-auth calls don't produce an
+ * on-chain settlement tx). Endpoint is resolved live via ENS.
+ */
+async function notifyScrapePaid(actor: string, amount: string, txHash?: `0x${string}`) {
+  try {
+    const records = await resolveAgent(ensClient, env.managerEns);
+    if (!records.address) return;
+    const endpoint = pickAgentEndpoint(records, ["a2a"]);
+    if (!endpoint) return;
+    await fetch(`${endpoint.replace(/\/$/, "")}/scrape-paid`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actor, amount, txHash }),
+    });
+  } catch (err) {
+    logger.debug({ err, actor }, "scrape-paid notify failed (best-effort)");
+  }
+}
 
 export interface ScrapedItem {
   source: "reddit" | "twitter" | "telegram" | "news" | "polymarket" | "stub";
@@ -36,21 +60,32 @@ function getX402Fetcher(): typeof fetch {
 
 const x402Fetcher = getX402Fetcher();
 
-/** Generic Apify call — accepts a fetcher override for x402-eligible actors. */
+/**
+ * Generic Apify call — accepts a fetcher override for x402-eligible actors.
+ *
+ * Token-auth path (default): URL carries `?token=...` so Apify authenticates
+ * the call directly and never issues a 402.
+ *
+ * x402 path (when `opts.fetcher` is provided, i.e. Polymarket): URL omits
+ * the token entirely. We add `X-APIFY-PAYMENT-PROTOCOL: X402` so Apify
+ * knows to respond with a 402 + `payment-required` quote header, which the
+ * wrapped fetcher signs (with the watcher EOA's USDC) and resends.
+ */
 async function callActor(
   actorId: string,
   input: object,
   opts: { fetcher?: typeof fetch } = {},
 ): Promise<unknown[]> {
-  if (!env.apifyToken) return [];
+  if (!env.apifyToken && !opts.fetcher) return [];
   const f = opts.fetcher ?? fetch;
+  const useX402 = !!opts.fetcher;
+  const url = useX402
+    ? `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items`
+    : `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${env.apifyToken}`;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (useX402) headers["X-APIFY-PAYMENT-PROTOCOL"] = "X402";
   try {
-    const url = `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${env.apifyToken}`;
-    const res = await f(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    });
+    const res = await f(url, { method: "POST", headers, body: JSON.stringify(input) });
     if (!res.ok) {
       logger.warn({ status: res.status, actorId }, "apify call failed");
       return [];
@@ -196,34 +231,52 @@ const POLYMARKET_KEYWORDS = [
  * classifier as a direct threat probability (skips the LLM).
  */
 export async function scrapePolymarket(): Promise<ScrapedItem[]> {
-  type PMarket = {
-    ticker?: string;
-    title?: string;
-    question?: string;
-    yesPrice?: number | string;
-    impliedProbability?: number | string;
-    volume?: number | string;
-    url?: string;
-    slug?: string;
+  type PItem = {
+    parentMarket?: {
+      title?: string;
+      eventUrl?: string;
+      volume?: number;
+    };
+    market?: {
+      title?: string;
+      outcomes?: Array<{ name?: string; price?: number }>;
+    };
   };
-  const markets = (await callActor(
+  const items = (await callActor(
     "fatihtahta~polymarket-scraper-ppe",
-    {},
+    { queries: ["aave", "defi", "usdc", "crypto"], limit: 10, status: "active" },
     { fetcher: x402Fetcher },
-  )) as PMarket[];
+  )) as PItem[];
 
-  return markets
-    .map((m) => {
-      const title = String(m.title ?? m.question ?? m.ticker ?? "");
-      const yes = Number(m.yesPrice ?? m.impliedProbability ?? 0);
-      const prob = yes > 1 ? yes / 100 : yes;
-      const vol = Number(m.volume ?? 0);
-      const url = String(m.url ?? (m.slug ? `https://polymarket.com/event/${m.slug}` : ""));
+  // Real x402 settlement happened if items came back. Notify the manager so
+  // the audit log shows the metered scrape.
+  if (items.length > 0) {
+    void notifyScrapePaid("polymarket", "1.00").catch(() => {});
+  }
+
+  return items
+    .map((it) => {
+      const title = String(it.parentMarket?.title ?? it.market?.title ?? "");
+      const url = String(it.parentMarket?.eventUrl ?? "");
+      const vol = Number(it.parentMarket?.volume ?? 0);
+      // outcomes may arrive as an array, JSON string, or object — be defensive.
+      let outcomesArr: Array<{ name?: string; price?: number }> = [];
+      const raw = it.market?.outcomes as unknown;
+      if (Array.isArray(raw)) {
+        outcomesArr = raw as Array<{ name?: string; price?: number }>;
+      } else if (typeof raw === "string") {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) outcomesArr = parsed;
+        } catch {
+          /* ignore */
+        }
+      }
+      const yesOutcome = outcomesArr.find((o) => o.name?.toLowerCase?.() === "yes");
+      const prob = Number(yesOutcome?.price ?? 0);
       return { title, prob, vol, url };
     })
-    .filter(
-      (m) => m.title && POLYMARKET_KEYWORDS.some((kw) => m.title.toLowerCase().includes(kw)),
-    )
+    .filter((m) => !!m.title)
     .map((m, i) => ({
       source: "polymarket" as const,
       id: `pm-${(m.url || m.title).slice(-48)}-${i}`,

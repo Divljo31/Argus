@@ -133,9 +133,7 @@ export function ChatPanel() {
         functionName: "withdrawToOwner",
         args: [amt],
       });
-      pushAgent(
-        `Withdraw tx: ${TX_LINK(tx)}. Note: only idle USDC withdraws directly. If funds are in Aave, ask manager to exit first.`,
-      );
+      pushAgent(`Withdraw tx: ${TX_LINK(tx)}`);
     } catch (e) {
       pushAgent(`error: ${(e as Error).message.slice(0, 200)}`);
     }
@@ -200,7 +198,7 @@ export function ChatPanel() {
   }
 
   return (
-    <div className="fade-col flex flex-col overflow-hidden">
+    <div className="fade-col flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-panel px-4 py-3">
         <div className="font-mono text-[10px] uppercase tracking-[2px] text-muted">
           // agent · {PUBLIC_ENV.managerEns}

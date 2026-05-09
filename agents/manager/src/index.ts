@@ -6,6 +6,9 @@ import {
   type ThreatAlertReceipt,
   type WithdrawReceipt,
   type DepositReceipt,
+  type UserWithdrawReceipt,
+  type X402PaymentReceipt,
+  type BountyPaidReceipt,
 } from "@argus/shared";
 import { isAddressEqual } from "viem";
 import { account, baseClient } from "./clients.js";
@@ -122,7 +125,58 @@ app.post("/alerts", async (req, res) => {
   saveReceipt("withdraw-aave", withdrawReceipt, await uploadReceipt(withdrawReceipt));
   markProcessed(alert.payload.alertId, alert.payload.score, "exit", result.txHash);
 
+  // Bounty payout — 50 bps of saved capital, attributed to the watcher whose
+  // signal triggered the exit. Synthetic for the demo; real settlement contract
+  // is post-MVP.
+  const BOUNTY_RATE_BPS = 50;
+  const savedAmount = result.amount;
+  const bountyAmount = (savedAmount * BigInt(BOUNTY_RATE_BPS)) / 10_000n;
+  const bountyReceipt: BountyPaidReceipt = {
+    kind: "bounty-paid",
+    agent: env.managerEns as `${string}.${string}`,
+    agentAddress: account.address,
+    recipient: env.watcherEns as `${string}.${string}`,
+    recipientAddress: watcherAddress ?? account.address,
+    amount: bountyAmount.toString(),
+    rateBps: BOUNTY_RATE_BPS,
+    savedAmount: savedAmount.toString(),
+    triggeredByAlertId: alert.payload.alertId,
+    txHash: result.txHash,
+    chainId: 8453,
+    timestamp: Date.now(),
+  };
+  saveReceipt("bounty-paid", bountyReceipt, await uploadReceipt(bountyReceipt));
+
   return res.json({ status: "exited", txHash: result.txHash, amount: result.amount.toString() });
+});
+
+/**
+ * Watcher → Manager: notifies us that a metered scrape just settled.
+ * Body: { actor, amount (decimal USDC string), txHash (settlement tx) }.
+ * The watcher POSTs this every time x402-fetch returns a successful response
+ * with payment headers attached. Each call becomes an audit-log entry.
+ */
+app.post("/scrape-paid", async (req, res) => {
+  const { actor, amount, txHash } = req.body as {
+    actor?: string;
+    amount?: string;
+    txHash?: `0x${string}`;
+  };
+  if (!actor || !amount) {
+    return res.status(400).json({ error: "actor and amount required" });
+  }
+  const receipt: X402PaymentReceipt = {
+    kind: "x402-payment",
+    agent: env.managerEns as `${string}.${string}`,
+    agentAddress: account.address,
+    actor,
+    amount,
+    ...(txHash ? { txHash } : {}),
+    chainId: 8453,
+    timestamp: Date.now(),
+  };
+  saveReceipt("x402-payment", receipt, await uploadReceipt(receipt));
+  return res.json({ status: "recorded" });
 });
 
 /**
@@ -156,12 +210,45 @@ async function watchDeposits() {
   });
 }
 
+/**
+ * Watch the vault for user-initiated withdrawToOwner events. The manager
+ * doesn't trigger these but records them so the audit log is complete.
+ */
+async function watchUserWithdrawals() {
+  baseClient.watchContractEvent({
+    address: env.vaultAddress,
+    abi: yieldVaultAbi,
+    eventName: "WithdrawToOwner",
+    onLogs: async (logs) => {
+      for (const log of logs) {
+        const args = log.args as { to?: `0x${string}`; amount?: bigint };
+        logger.info({ log: args }, "WithdrawToOwner event detected");
+        if (!args.amount || !args.to || !log.transactionHash) continue;
+        const receipt: UserWithdrawReceipt = {
+          kind: "user-withdraw",
+          agent: env.managerEns as `${string}.${string}`,
+          agentAddress: account.address,
+          chainId: 8453,
+          txHash: log.transactionHash,
+          amount: args.amount.toString(),
+          vault: env.vaultAddress,
+          to: args.to,
+          timestamp: Date.now(),
+        };
+        saveReceipt("user-withdraw", receipt, await uploadReceipt(receipt));
+      }
+    },
+    onError: (err) => logger.error({ err }, "WithdrawToOwner watch error"),
+  });
+}
+
 async function main() {
   await refreshWatcherAddress();
   // Re-resolve watcher periodically so renames don't break us mid-demo.
   setInterval(refreshWatcherAddress, 60_000);
 
   await watchDeposits();
+  await watchUserWithdrawals();
 
   app.listen(env.port, () => {
     logger.info(

@@ -68,9 +68,14 @@ export function ThreatPanel() {
   }, []);
 
   const rows = (receipts.data ?? []) as ReceiptRow[];
-  const alertRows = rows.filter((r) => r.kind === "threat-alert");
+  // Cap real alerts to keep the Evidence section a fixed visual size.
+  const alertRows = rows.filter((r) => r.kind === "threat-alert").slice(0, 2);
   const exitRows = rows.filter((r) => r.kind === "withdraw-aave").slice(0, 5).sort((a, b) => b.created_at - a.created_at);
-  const auditRows = rows.filter((r) => r.kind !== "threat-alert" && r.kind !== "withdraw-aave").slice(0, 8).sort((a, b) => b.created_at - a.created_at);
+  // Audit log: deposits, manager withdraws, x402 settlements, bounty payouts.
+  // Excludes off-chain threat-alert receipts (those are in Evidence) and
+  // user-initiated withdrawals (those are user actions, not agent actions).
+  const AUDIT_KINDS = new Set(["deposit-aave", "withdraw-aave", "x402-payment", "bounty-paid"]);
+  const auditRows = rows.filter((r) => AUDIT_KINDS.has(r.kind)).slice(0, 12).sort((a, b) => b.created_at - a.created_at);
   const totalSavedUsdc = exitRows.reduce((sum, r) => {
     const a = r.payload.amount;
     if (typeof a === "string" || typeof a === "number") return sum + Number(a) / 1e6;
@@ -90,7 +95,7 @@ export function ThreatPanel() {
   const visible = WATCHERS.filter((w) => subbed.has(w.id));
 
   return (
-    <div className="fade-col flex flex-col overflow-hidden">
+    <div className="fade-col flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-panel px-4 py-3">
         <div className="font-mono text-[10px] uppercase tracking-[2px] text-muted">
           // threat watchers
@@ -348,6 +353,10 @@ function describeReceipt(r: ReceiptRow): string {
       return `Deposit → Aave · ${formatAmount(r.payload.amount)} USDC`;
     case "withdraw-aave":
       return `Withdraw ← Aave · ${formatAmount(r.payload.amount)} USDC`;
+    case "x402-payment":
+      return `x402 paid · ${r.payload.amount} USDC ${r.payload.actor} scrape`;
+    case "bounty-paid":
+      return `Bounty paid · ${formatAmount(r.payload.amount)} USDC → ${(r.payload.recipient as string)?.split(".")[0] ?? "watcher"}`;
     case "threat-alert":
       return `Threat alert · score ${r.payload.score}`;
     default:

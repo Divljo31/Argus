@@ -55,7 +55,7 @@ export function PortfolioPanel() {
   const rows: VaultRow[] = hasPosition ? [liveRow] : [];
 
   return (
-    <div className="fade-col flex flex-col overflow-hidden">
+    <div className="fade-col flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-panel px-4 py-3">
         <div className="font-mono text-[10px] uppercase tracking-[2px] text-muted">// portfolio</div>
         <div className="font-mono text-[10px] text-dim">
