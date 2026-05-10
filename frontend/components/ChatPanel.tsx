@@ -208,7 +208,7 @@ export function ChatPanel() {
         </div>
       </div>
 
-      <div ref={threadRef} className="flex flex-1 flex-col gap-[18px] overflow-y-auto px-4 py-5">
+      <div ref={threadRef} className="flex min-h-0 flex-1 flex-col gap-[18px] overflow-y-auto px-4 py-5">
         {messages.map((m, i) => (
           <div key={i} className="flex flex-col gap-1">
             <div className="font-mono text-[9px] uppercase tracking-[1.2px] text-dim">
